@@ -319,9 +319,14 @@ export default function WorkshopDetail() {
           workshop={workshop}
           requestConfirm={setConfirm}
           onClose={() => setWorkshopModal(false)}
-          onSaved={(msg) => {
+          onSaved={(msg, updatedWorkshop) => {
             setConfirm(null);
             setWorkshopModal(false);
+            // Reflect the saved values in the header immediately, straight from
+            // the API response — no waiting on (or trusting) a reload/cache.
+            if (updatedWorkshop) {
+              setData((prev) => ({ ...prev, workshop: updatedWorkshop }));
+            }
             setSuccess(msg);
             load();
           }}
@@ -400,12 +405,12 @@ function WorkshopModal({ workshop, requestConfirm, onClose, onSaved }) {
       message: `Save changes to "${form.name}"?`,
       confirmLabel: "Save changes",
       onConfirm: async () => {
-        await api.put(`/workshops/${workshop._id}`, {
+        const { data: updated } = await api.put(`/workshops/${workshop._id}`, {
           ...form,
           startDate: fromInputDateTime(form.startDate),
           endDate: fromInputDateTime(form.endDate),
         });
-        onSaved("Workshop updated successfully.");
+        onSaved("Workshop updated successfully.", updated);
       },
     });
   };
