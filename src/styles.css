@@ -122,6 +122,7 @@ body {
 }
 .login-card {
   width: 340px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -196,6 +197,7 @@ label {
 input,
 select {
   width: 100%;
+  min-width: 0; /* allow inputs (esp. datetime-local) to shrink on small screens */
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -259,7 +261,8 @@ select:focus {
   background: #fff;
   border-radius: var(--radius);
   width: 460px;
-  max-width: 100%;
+  max-width: calc(100vw - 32px); /* always leave the 16px backdrop padding */
+  min-width: 0; /* let the grid item honor max-width instead of min-content */
   max-height: 90vh;
   overflow: auto;
 }
@@ -312,6 +315,7 @@ select:focus {
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch; /* momentum scroll on iOS */
 }
 table {
   /* size to content: columns take only the space they need instead of
@@ -425,4 +429,82 @@ th {
 .checkbox-label input {
   width: 18px;
   height: 18px;
+}
+
+/* ===================================================================
+   Responsive — tablets & phones
+   The data table stays horizontally scrollable inside .table-wrap;
+   everything else reflows to a single, comfortable column.
+   =================================================================== */
+
+/* Tablets / small laptops */
+@media (max-width: 768px) {
+  .page {
+    padding: 16px;
+  }
+  .topbar {
+    margin-bottom: 18px;
+  }
+}
+
+/* Phones */
+@media (max-width: 600px) {
+  .page {
+    padding: 12px;
+  }
+
+  /* Stack the top bar and let actions span the full width */
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .topbar-actions {
+    width: 100%;
+  }
+  .topbar-actions .btn {
+    flex: 1 1 auto; /* buttons share the row and grow to fill it */
+  }
+
+  /* One workshop card per row */
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* Side-by-side date inputs stack vertically */
+  .grid2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Group header: title above its action buttons */
+  .group-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .group-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  /* Roomier tap targets */
+  .btn {
+    padding: 10px 14px;
+  }
+  .btn.small {
+    padding: 8px 12px;
+  }
+
+  /* Full-width modal footer buttons, easier to tap */
+  .modal-foot {
+    flex-direction: column-reverse;
+  }
+  .modal-foot .btn {
+    width: 100%;
+  }
+
+  /* Séance date label sits above its input instead of beside it */
+  .seance-date-row {
+    flex-wrap: wrap;
+  }
+  .seance-date-row input {
+    flex: 1 1 100%;
+  }
 }
