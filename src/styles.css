@@ -286,6 +286,39 @@ select:focus {
   margin-top: 16px;
 }
 
+/* ---- confirmation & success modals ---- */
+.confirm-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text, #1f2937);
+}
+.success-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 6px 0 2px;
+}
+.success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #d1fae5;
+  color: var(--ok);
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+.success-modal p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text, #1f2937);
+}
+
 /* ---- group blocks & tables ---- */
 .group-block {
   background: #fff;

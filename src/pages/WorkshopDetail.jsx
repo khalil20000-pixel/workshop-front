@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "../api";
 import Modal from "../components/Modal.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
+import SuccessModal from "../components/SuccessModal.jsx";
 import { fmt, toInputDateTime } from "../utils";
 
 export default function WorkshopDetail() {
@@ -14,6 +16,8 @@ export default function WorkshopDetail() {
   const [groupModal, setGroupModal] = useState(null); // {mode:'add'|'edit', group?}
   const [partModal, setPartModal] = useState(null); // {groupId, participant?}
   const [presenceModal, setPresenceModal] = useState(null); // {participant, group}
+  const [confirm, setConfirm] = useState(null); // confirmation dialog config
+  const [success, setSuccess] = useState(""); // success message
 
   const load = async () => {
     const { data } = await api.get(`/workshops/${id}`);
@@ -72,16 +76,34 @@ export default function WorkshopDetail() {
     }
   };
 
-  const deleteGroup = async (g) => {
-    if (!confirm(`Delete group "${g.name}" and its participants?`)) return;
-    await api.delete(`/groups/${g._id}`);
-    load();
+  const deleteGroup = (g) => {
+    setConfirm({
+      title: "Delete group",
+      message: `Delete group "${g.name}" and its participants? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+      onConfirm: async () => {
+        await api.delete(`/groups/${g._id}`);
+        setConfirm(null);
+        setSuccess("Group deleted successfully.");
+        load();
+      },
+    });
   };
 
-  const deleteParticipant = async (p) => {
-    if (!confirm(`Remove participant "${p.name}"?`)) return;
-    await api.delete(`/participants/${p._id}`);
-    load();
+  const deleteParticipant = (p) => {
+    setConfirm({
+      title: "Remove participant",
+      message: `Remove participant "${p.name}"? This cannot be undone.`,
+      confirmLabel: "Remove",
+      danger: true,
+      onConfirm: async () => {
+        await api.delete(`/participants/${p._id}`);
+        setConfirm(null);
+        setSuccess("Participant removed successfully.");
+        load();
+      },
+    });
   };
 
   return (
@@ -295,9 +317,12 @@ export default function WorkshopDetail() {
       {workshopModal && (
         <WorkshopModal
           workshop={workshop}
+          requestConfirm={setConfirm}
           onClose={() => setWorkshopModal(false)}
-          onSaved={() => {
+          onSaved={(msg) => {
+            setConfirm(null);
             setWorkshopModal(false);
+            setSuccess(msg);
             load();
           }}
         />
@@ -307,9 +332,12 @@ export default function WorkshopDetail() {
         <GroupModal
           workshopId={workshop._id}
           data={groupModal}
+          requestConfirm={setConfirm}
           onClose={() => setGroupModal(null)}
-          onSaved={() => {
+          onSaved={(msg) => {
+            setConfirm(null);
             setGroupModal(null);
+            setSuccess(msg);
             load();
           }}
         />
@@ -320,9 +348,12 @@ export default function WorkshopDetail() {
           workshopId={workshop._id}
           groupId={partModal.groupId}
           participant={partModal.participant}
+          requestConfirm={setConfirm}
           onClose={() => setPartModal(null)}
-          onSaved={() => {
+          onSaved={(msg) => {
+            setConfirm(null);
             setPartModal(null);
+            setSuccess(msg);
             load();
           }}
         />
@@ -342,11 +373,19 @@ export default function WorkshopDetail() {
           onClose={() => setPresenceModal(null)}
         />
       )}
+
+      {confirm && (
+        <ConfirmModal {...confirm} onClose={() => setConfirm(null)} />
+      )}
+
+      {success && (
+        <SuccessModal message={success} onClose={() => setSuccess("")} />
+      )}
     </div>
   );
 }
 
-function WorkshopModal({ workshop, onClose, onSaved }) {
+function WorkshopModal({ workshop, requestConfirm, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: workshop.name || "",
     teacher: workshop.teacher || "",
@@ -354,10 +393,17 @@ function WorkshopModal({ workshop, onClose, onSaved }) {
     endDate: toInputDateTime(workshop.endDate),
   });
 
-  const submit = async (e) => {
+  const submit = (e) => {
     e.preventDefault();
-    await api.put(`/workshops/${workshop._id}`, form);
-    onSaved();
+    requestConfirm({
+      title: "Update workshop",
+      message: `Save changes to "${form.name}"?`,
+      confirmLabel: "Save changes",
+      onConfirm: async () => {
+        await api.put(`/workshops/${workshop._id}`, form);
+        onSaved("Workshop updated successfully.");
+      },
+    });
   };
 
   return (
@@ -456,7 +502,7 @@ function PresenceModal({ participant, group, onToggle, onClose }) {
   );
 }
 
-function GroupModal({ workshopId, data, onClose, onSaved }) {
+function GroupModal({ workshopId, data, requestConfirm, onClose, onSaved }) {
   const editing = data.mode === "edit";
   const g = data.group || {};
   const [name, setName] = useState(g.name || "");
@@ -481,19 +527,33 @@ function GroupModal({ workshopId, data, onClose, onSaved }) {
     });
   };
 
-  const submit = async (e) => {
+  const submit = (e) => {
     e.preventDefault();
     const payload = {
       name,
       teacher,
       seances: seanceDates.map((d) => ({ datetime: d || null })),
     };
+    const performSave = async () => {
+      if (editing) {
+        await api.put(`/groups/${g._id}`, payload);
+      } else {
+        await api.post("/groups", { ...payload, workshop: workshopId });
+      }
+      onSaved(
+        editing ? "Group updated successfully." : "Group added successfully."
+      );
+    };
     if (editing) {
-      await api.put(`/groups/${g._id}`, payload);
+      requestConfirm({
+        title: "Update group",
+        message: `Save changes to "${name}"?`,
+        confirmLabel: "Save changes",
+        onConfirm: performSave,
+      });
     } else {
-      await api.post("/groups", { ...payload, workshop: workshopId });
+      performSave();
     }
-    onSaved();
   };
 
   return (
@@ -544,7 +604,14 @@ function GroupModal({ workshopId, data, onClose, onSaved }) {
   );
 }
 
-function ParticipantModal({ workshopId, groupId, participant, onClose, onSaved }) {
+function ParticipantModal({
+  workshopId,
+  groupId,
+  participant,
+  requestConfirm,
+  onClose,
+  onSaved,
+}) {
   const editing = !!participant;
   const [form, setForm] = useState({
     name: participant?.name || "",
@@ -553,18 +620,34 @@ function ParticipantModal({ workshopId, groupId, participant, onClose, onSaved }
     paid: participant?.paid || false,
   });
 
-  const submit = async (e) => {
+  const submit = (e) => {
     e.preventDefault();
+    const performSave = async () => {
+      if (editing) {
+        await api.put(`/participants/${participant._id}`, form);
+      } else {
+        await api.post("/participants", {
+          ...form,
+          workshop: workshopId,
+          group: groupId,
+        });
+      }
+      onSaved(
+        editing
+          ? "Participant updated successfully."
+          : "Participant added successfully."
+      );
+    };
     if (editing) {
-      await api.put(`/participants/${participant._id}`, form);
-    } else {
-      await api.post("/participants", {
-        ...form,
-        workshop: workshopId,
-        group: groupId,
+      requestConfirm({
+        title: "Update participant",
+        message: `Save changes to "${form.name}"?`,
+        confirmLabel: "Save changes",
+        onConfirm: performSave,
       });
+    } else {
+      performSave();
     }
-    onSaved();
   };
 
   return (

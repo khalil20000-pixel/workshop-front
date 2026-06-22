@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../api";
 import { useAuth } from "../AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
+import SuccessModal from "../components/SuccessModal.jsx";
 import { fmt, toInputDateTime } from "../utils";
 
 const emptyForm = {
@@ -22,6 +24,8 @@ export default function Dashboard() {
   const [editing, setEditing] = useState(null); // workshop being edited
   const [form, setForm] = useState(emptyForm);
   const [showPwd, setShowPwd] = useState(false);
+  const [confirm, setConfirm] = useState(null); // {title, message, ...}
+  const [success, setSuccess] = useState(""); // success message
 
   const load = async () => {
     setLoading(true);
@@ -52,24 +56,53 @@ export default function Dashboard() {
     setShowForm(true);
   };
 
-  const save = async (e) => {
-    e.preventDefault();
+  const doSave = async () => {
+    const wasEditing = !!editing;
     const payload = { ...form };
-    if (editing) {
+    if (wasEditing) {
       await api.put(`/workshops/${editing._id}`, payload);
     } else {
       await api.post("/workshops", payload);
     }
+    setConfirm(null);
     setShowForm(false);
+    setSuccess(
+      wasEditing
+        ? "Workshop updated successfully."
+        : "Workshop created successfully."
+    );
     load();
   };
 
-  const remove = async (w, e) => {
+  const save = (e) => {
+    e.preventDefault();
+    if (editing) {
+      // confirm before applying an update
+      setConfirm({
+        title: "Update workshop",
+        message: `Save changes to "${form.name}"?`,
+        confirmLabel: "Save changes",
+        onConfirm: doSave,
+      });
+    } else {
+      doSave();
+    }
+  };
+
+  const remove = (w, e) => {
     e.stopPropagation();
-    if (!confirm(`Delete workshop "${w.name}" and all its groups/participants?`))
-      return;
-    await api.delete(`/workshops/${w._id}`);
-    load();
+    setConfirm({
+      title: "Delete workshop",
+      message: `Delete "${w.name}" and all its groups & participants? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+      onConfirm: async () => {
+        await api.delete(`/workshops/${w._id}`);
+        setConfirm(null);
+        setSuccess("Workshop deleted successfully.");
+        load();
+      },
+    });
   };
 
   return (
@@ -186,6 +219,14 @@ export default function Dashboard() {
       )}
 
       {showPwd && <ResetPassword onClose={() => setShowPwd(false)} />}
+
+      {confirm && (
+        <ConfirmModal {...confirm} onClose={() => setConfirm(null)} />
+      )}
+
+      {success && (
+        <SuccessModal message={success} onClose={() => setSuccess("")} />
+      )}
     </div>
   );
 }
