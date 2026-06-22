@@ -11,6 +11,14 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // Prevent the browser (and any CDN/proxy) from serving a stale cached
+  // response for GETs. Without this, after an edit the app can reload the
+  // *old* cached data, so the UI looks like it "didn't change". A unique
+  // timestamp param makes every GET URL distinct, forcing a fresh read.
+  if ((config.method || "get").toLowerCase() === "get") {
+    config.params = { ...(config.params || {}), _t: Date.now() };
+  }
   return config;
 });
 
