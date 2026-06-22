@@ -10,6 +10,7 @@ export default function WorkshopDetail() {
   const [loading, setLoading] = useState(true);
 
   // modal state
+  const [workshopModal, setWorkshopModal] = useState(false);
   const [groupModal, setGroupModal] = useState(null); // {mode:'add'|'edit', group?}
   const [partModal, setPartModal] = useState(null); // {groupId, participant?}
   const [presenceModal, setPresenceModal] = useState(null); // {participant, group}
@@ -97,6 +98,9 @@ export default function WorkshopDetail() {
           </div>
         </div>
         <div className="topbar-actions">
+          <button className="btn" onClick={() => setWorkshopModal(true)}>
+            Edit Workshop
+          </button>
           <button
             className="btn primary"
             onClick={() => setGroupModal({ mode: "add" })}
@@ -288,6 +292,17 @@ export default function WorkshopDetail() {
         );
       })}
 
+      {workshopModal && (
+        <WorkshopModal
+          workshop={workshop}
+          onClose={() => setWorkshopModal(false)}
+          onSaved={() => {
+            setWorkshopModal(false);
+            load();
+          }}
+        />
+      )}
+
       {groupModal && (
         <GroupModal
           workshopId={workshop._id}
@@ -328,6 +343,65 @@ export default function WorkshopDetail() {
         />
       )}
     </div>
+  );
+}
+
+function WorkshopModal({ workshop, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: workshop.name || "",
+    teacher: workshop.teacher || "",
+    startDate: toInputDateTime(workshop.startDate),
+    endDate: toInputDateTime(workshop.endDate),
+  });
+
+  const submit = async (e) => {
+    e.preventDefault();
+    await api.put(`/workshops/${workshop._id}`, form);
+    onSaved();
+  };
+
+  return (
+    <Modal title="Edit Workshop" onClose={onClose}>
+      <form onSubmit={submit} className="form">
+        <label>Name</label>
+        <input
+          required
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+        <label>Teacher</label>
+        <input
+          value={form.teacher}
+          onChange={(e) => setForm({ ...form, teacher: e.target.value })}
+        />
+        <div className="grid2">
+          <div>
+            <label>Start date &amp; time</label>
+            <input
+              type="datetime-local"
+              required
+              value={form.startDate}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            />
+          </div>
+          <div>
+            <label>End date &amp; time</label>
+            <input
+              type="datetime-local"
+              required
+              value={form.endDate}
+              onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="modal-foot">
+          <button type="button" className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn primary">Save changes</button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
