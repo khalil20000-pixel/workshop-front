@@ -24,3 +24,16 @@ export function toInputDateTime(iso) {
     `T${pad(d.getHours())}:${pad(d.getMinutes())}`
   );
 }
+
+// Convert a <input type="datetime-local"> value (local time, no timezone) into
+// a full UTC ISO string before sending it to the API. Parsing happens in the
+// browser, so the user's local timezone is applied correctly — the server then
+// stores the right instant regardless of its own timezone (e.g. UTC on Render).
+// Without this, saving shifts the displayed time by the local UTC offset.
+// Returns null for an empty value.
+export function fromInputDateTime(value) {
+  if (!value) return null;
+  const d = new Date(value); // interpreted in the browser's local timezone
+  if (isNaN(d)) return null;
+  return d.toISOString();
+}

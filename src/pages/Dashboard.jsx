@@ -5,7 +5,7 @@ import { useAuth } from "../AuthContext.jsx";
 import Modal from "../components/Modal.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import SuccessModal from "../components/SuccessModal.jsx";
-import { fmt, toInputDateTime } from "../utils";
+import { fmt, toInputDateTime, fromInputDateTime } from "../utils";
 
 const emptyForm = {
   name: "",
@@ -58,7 +58,11 @@ export default function Dashboard() {
 
   const doSave = async () => {
     const wasEditing = !!editing;
-    const payload = { ...form };
+    const payload = {
+      ...form,
+      startDate: fromInputDateTime(form.startDate),
+      endDate: fromInputDateTime(form.endDate),
+    };
     if (wasEditing) {
       await api.put(`/workshops/${editing._id}`, payload);
     } else {

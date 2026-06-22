@@ -4,7 +4,7 @@ import api from "../api";
 import Modal from "../components/Modal.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 import SuccessModal from "../components/SuccessModal.jsx";
-import { fmt, toInputDateTime } from "../utils";
+import { fmt, toInputDateTime, fromInputDateTime } from "../utils";
 
 export default function WorkshopDetail() {
   const { id } = useParams();
@@ -400,7 +400,11 @@ function WorkshopModal({ workshop, requestConfirm, onClose, onSaved }) {
       message: `Save changes to "${form.name}"?`,
       confirmLabel: "Save changes",
       onConfirm: async () => {
-        await api.put(`/workshops/${workshop._id}`, form);
+        await api.put(`/workshops/${workshop._id}`, {
+          ...form,
+          startDate: fromInputDateTime(form.startDate),
+          endDate: fromInputDateTime(form.endDate),
+        });
         onSaved("Workshop updated successfully.");
       },
     });
@@ -532,7 +536,7 @@ function GroupModal({ workshopId, data, requestConfirm, onClose, onSaved }) {
     const payload = {
       name,
       teacher,
-      seances: seanceDates.map((d) => ({ datetime: d || null })),
+      seances: seanceDates.map((d) => ({ datetime: fromInputDateTime(d) })),
     };
     const performSave = async () => {
       if (editing) {
